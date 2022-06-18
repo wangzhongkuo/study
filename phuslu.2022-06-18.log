@@ -1,0 +1,2 @@
+2022-06-18 15:23:00.102 INF 19 log_test.go:42 > ctx="some_ctx2" n=42 aaa
+2022-06-18 15:23:15.136 INF 21 log_test.go:42 > ctx="some_ctx2" n=42 aaa

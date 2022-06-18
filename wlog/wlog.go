@@ -8,7 +8,12 @@ import (
 	"strings"
 )
 
-var defaultWlog wlog
+var defaultWlog = wlog{plog.DefaultLogger}
+
+type CTX context.Context
+
+var TidKey = "x-client-trace-id"
+var RidKey = "x-seayoo-request-id"
 
 type wlog struct {
 	plog.Logger
@@ -17,15 +22,12 @@ type wlog struct {
 func InitWlog() {
 	writer := plog.MultiEntryWriter{
 		&plog.ConsoleWriter{
-			ColorOutput: true,
-			//QuoteString:    true,
-			EndWithMessage: true,
 			Formatter: func(w io.Writer, a *plog.FormatterArgs) (n int, err error) {
-				tid := a.Get("x-client-trace-id")
-				rid := a.Get("x-seayoo-request-id")
+				tid := a.Get(TidKey)
+				rid := a.Get(RidKey)
 				n, _ = fmt.Fprintf(w, "%s %s %s [%s,%s] >", a.Time, strings.ToUpper(a.Level), a.Caller, tid, rid)
 				for _, kv := range a.KeyValues {
-					if kv.Key != "x-client-trace-id" && kv.Key != "x-seayoo-request-id" {
+					if kv.Key != TidKey && kv.Key != RidKey {
 						i, _ := fmt.Fprintf(w, " %s=%s", kv.Key, kv.Value)
 						n += i
 					}
@@ -53,8 +55,11 @@ func InitWlog() {
 	defaultWlog = wlog{logger}
 }
 
-func Info(ctx context.Context) *plog.Entry {
-	return defaultWlog.Info().Context(logContext(ctx))
+func Info(ctx ...context.Context) *plog.Entry {
+	if len(ctx) == 0 {
+		return defaultWlog.Info()
+	}
+	return defaultWlog.Info().Context(logContext(ctx[0]))
 }
 
 func logContext(ctx context.Context) plog.Context {
@@ -63,9 +68,9 @@ func logContext(ctx context.Context) plog.Context {
 	if !ok {
 		return pc.Value()
 	}
-	tid, _ := keys["x-client-trace-id"].(string)
-	rid, _ := keys["x-seayoo-request-id"].(string)
-	pc.Str("x-client-trace-id", tid)
-	pc.Str("x-seayoo-request-id", rid)
+	tid, _ := keys[TidKey].(string)
+	rid, _ := keys[RidKey].(string)
+	pc.Str(TidKey, tid)
+	pc.Str(RidKey, rid)
 	return pc.Value()
 }
